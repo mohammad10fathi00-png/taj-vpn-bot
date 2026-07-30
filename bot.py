@@ -17,7 +17,8 @@ PANEL_PASSWORD = "@MohammadFathi1099"
 
 bot = telebot.TeleBot(TOKEN)
 waiting_for_config = {}
-waiting_for_custom_gb = {}  # برای مدیریت حجم دلخواه کاربران
+waiting_for_custom_gb = {}
+user_custom_gb_cache = {}
 processed_messages = {}
 
 def is_duplicate(message_id):
@@ -35,52 +36,68 @@ def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
         base_url = PANEL_URL.rstrip('/')
+        
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
             "Referer": f"{base_url}/",
-            "Origin": base_url
+            "Origin": base_url,
+            "X-Requested-With": "XMLHttpRequest"
         }
+        
+        # ۱. ورود به پنل و دریافت کوکی سشن
         login_url = f"{base_url}/login"
         payload = {"username": PANEL_USERNAME, "password": PANEL_PASSWORD}
         res = session.post(login_url, json=payload, headers=headers, verify=False, timeout=15)
         
         logged_in = False
         try:
-            if res.json().get("success") is True:
+            res_json = res.json()
+            if res_json.get("success") is True or res.status_code == 200:
                 logged_in = True
         except:
             if res.status_code == 200:
                 logged_in = True
 
-        if not logged_in:
+        if not logged_in and not session.cookies:
+            print("Panel Login Failed.")
             return None
 
-        inbounds_res = session.get(f"{base_url}/panel/api/inbounds/list", headers=headers, verify=False, timeout=15)
+        # ۲. گرفتن لیست اینباندها
+        inbounds_url = f"{base_url}/panel/api/inbounds/list"
+        inbounds_res = session.get(inbounds_url, headers=headers, verify=False, timeout=15)
         inbounds_data = inbounds_res.json()
+        
         if not inbounds_data.get("success") or not inbounds_data.get("obj"):
+            print("Get Inbounds Failed.")
             return None
         
         inbound_id = inbounds_data["obj"][0]['id']
         client_uuid = str(uuid.uuid4())
-        expire_time = int((time.time() + (30 * 86400)) * 1000)
+        expire_time = int((time.time() + (30 * 86400)) * 1000) # ۳۰ روزه
         total_bytes = int(gb_amount) * 1024 * 1024 * 1024
 
-        add_data = {
+        # ۳. ساخت کلاینت جدید با فرمت استاندارد پنل‌های X-UI (سنائی/پاسارگاد)
+        add_url = f"{base_url}/panel/api/inbounds/addClient"
+        client_data = {
             "id": inbound_id,
             "settings": f'{{"clients": [{{"id": "{client_uuid}", "alterId": 0, "email": "{username}", "limitIp": 0, "totalGB": {total_bytes}, "expiryTime": {expire_time}, "enable": true, "tgId": "", "subId": ""}}]}}'
         }
 
-        add_res = session.post(f"{base_url}/panel/api/inbounds/addClient", json=add_data, headers=headers, verify=False, timeout=15)
+        add_res = session.post(add_url, json=client_data, headers=headers, verify=False, timeout=15)
         add_json = add_res.json()
         
         if add_json.get("success"):
             server_ip = base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
             link = f"vless://{client_uuid}@{server_ip}:443?encryption=none&security=tls&type=tcp&headerType=none#{username}"
             return link
+        else:
+            print(f"Panel Error Response: {add_json}")
+            return None
+            
     except Exception as e:
-        print(f"Error: {e}")
-    return None
+        print(f"Exception in panel connection: {e}")
+        return None
 
 def main_inline_menu():
     markup = InlineKeyboardMarkup(row_width=2)
@@ -138,7 +155,6 @@ def handle_text_messages(message):
     user_id = message.from_user.id
     text = message.text
     
-    # دریافت حجم دلخواه از کاربر
     if user_id in waiting_for_custom_gb:
         del waiting_for_custom_gb[user_id]
         try:
@@ -158,11 +174,7 @@ def handle_text_messages(message):
                 "به نام: **محمد فتحی**\n\n"
                 "⏳ پس از واریز، **فیش واریزی** را همینجا بفرستید."
             )
-            # ذخیره حجم موقت برای این کاربر در حافظه ربات جهت استفاده موقع ارسال فیش
-            bot.set_state = gb # روش ذخیره ساده یا استفاده از دیکشنری سراسری
-            # برای سادگی، حجم رو به عنوان وضعیت موقت توی یک دیکشنری نگه می‌داریم:
             user_custom_gb_cache[user_id] = gb
-            
             bot.send_message(chat_id, invoice_text, parse_mode="Markdown")
             return
         except ValueError:
@@ -170,7 +182,6 @@ def handle_text_messages(message):
             waiting_for_custom_gb[user_id] = True
             return
 
-    # ارسال دستی کانفیگ توسط ادمین
     if user_id == ADMIN_ID and ADMIN_ID in waiting_for_config:
         data = waiting_for_config[ADMIN_ID]
         target_user_id = data["user_id"]
@@ -191,8 +202,6 @@ def handle_text_messages(message):
 
     if text:
         bot.send_message(chat_id, "از منوی زیر استفاده کنید:", reply_markup=main_inline_menu())
-
-user_custom_gb_cache = {}
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -308,7 +317,7 @@ def callback_query(call):
             except Exception:
                 bot.send_message(ADMIN_ID, "❌ خطا در ارسال پیام به کاربر.")
         else:
-            bot.send_message(ADMIN_ID, "❌ خطا در ساخت خودکار از پنل پاسارگاد!")
+            bot.send_message(ADMIN_ID, "❌ خطا در ساخت خودکار از پنل پاسارگاد! (لاگ سرور رو چک کن)")
 
     elif call.data.startswith("manual_"):
         _, target_user_id = call.data.split("_")
@@ -338,7 +347,6 @@ def handle_receipt(message):
     if is_duplicate(message.message_id):
         return
     user = message.from_user
-    # برداشتن حجم ذخیره شده برای کاربر یا پیش‌فرض ۵ گیگ
     gb_val = user_custom_gb_cache.get(user.id, 5)
     
     caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`\n📦 حجم درخواستی: {gb_val} گیگ"
