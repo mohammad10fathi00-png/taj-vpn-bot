@@ -11,14 +11,13 @@ TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
 ADMIN_ID = 7242000253
 ADMIN_USERNAME = "Mohammaddd0f"
 
-# ⚙️ تنظیمات پنل
+# ⚙️ تنظیمات دقیق پنل پاسارگاد شما
 PANEL_URL = "https://sub9.kaliteam.ir:8000"
 PANEL_USERNAME = "Mohammad1099"
 PANEL_PASSWORD = "@MohammadFathi1099"
 
 bot = telebot.TeleBot(TOKEN)
 waiting_for_config = {}
-user_pending_plan = {}
 processed_messages = {}
 
 def is_duplicate(message_id):
@@ -32,44 +31,57 @@ def is_duplicate(message_id):
         del processed_messages[k]
     return False
 
-# تابع اصلاح‌شده و دقیق ساخت خودکار کانفیگ با پنل X-UI
+# تابع اختصاصی و بی‌نقص برای پنل پاسارگاد
 def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
         base_url = PANEL_URL.rstrip('/')
         
-        # ۱. لاگین به پنل
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json"
+        }
+        
+        # ۱. لاگین استاندارد با جیسون برای پنل پاسارگاد
         login_url = f"{base_url}/login"
-        login_data = {
+        login_payload = {
             "username": PANEL_USERNAME,
             "password": PANEL_PASSWORD
         }
         
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            "Accept": "application/json, text/plain, */*"
-        }
+        res = session.post(login_url, json=login_payload, headers=headers, verify=False, timeout=15)
         
-        login_res = session.post(login_url, data=login_data, headers=headers, verify=False, timeout=15)
-        
+        # بررسی پاسخ لاگین
+        login_success = False
         try:
-            res_json = login_res.json()
-            if not res_json.get("success"):
-                print("Login failed response json:", res_json)
-                return None
-        except Exception as err:
-            print("Login JSON decode error:", err)
-            if login_res.status_code != 200:
-                print("Login status code error:", login_res.status_code)
-                return None
+            res_json = res.json()
+            if res_json.get("success") is True:
+                login_success = True
+        except Exception:
+            if res.status_code == 200 and session.cookies:
+                login_success = True
+
+        if not login_success:
+            # امتحان مسیر جایگزین در صورت نیاز
+            login_url_api = f"{base_url}/api/login"
+            res = session.post(login_url_api, json=login_payload, headers=headers, verify=False, timeout=15)
+            try:
+                if res.json().get("success") is True:
+                    login_success = True
+            except:
+                pass
+
+        if not login_success:
+            print("Pasargad Panel Login Failed!")
+            return None
 
         # ۲. گرفتن لیست اینباندها
-        inbounds_url = f"{base_url}/panel/api/inbounds/list"
-        inbounds_res = session.get(inbounds_url, headers=headers, verify=False, timeout=15)
+        inbounds_res = session.get(f"{base_url}/panel/api/inbounds/list", headers=headers, verify=False, timeout=15)
         inbounds_data = inbounds_res.json()
         
         if not inbounds_data.get("success") or not inbounds_data.get("obj"):
-            print("Failed to fetch inbounds:", inbounds_data)
+            print("Failed to fetch inbounds from Pasargad panel.")
             return None
         
         inbounds = inbounds_data["obj"]
@@ -79,14 +91,13 @@ def create_vless_config_via_panel(username, gb_amount):
         expire_time = int((time.time() + (30 * 86400)) * 1000) # ۳۰ روزه
         total_bytes = int(gb_amount) * 1024 * 1024 * 1024
 
-        # ۳. ساخت کلاینت جدید
-        add_url = f"{base_url}/panel/api/inbounds/addClient"
+        # ۳. افزودن کلاینت جدید با فرمت سازگار با پاسارگاد
         add_data = {
             "id": inbound_id,
             "settings": f'{{"clients": [{{"id": "{client_uuid}", "alterId": 0, "email": "{username}", "limitIp": 0, "totalGB": {total_bytes}, "expiryTime": {expire_time}, "enable": true, "tgId": "", "subId": ""}}]}}'
         }
 
-        add_res = session.post(add_url, json=add_data, headers=headers, verify=False, timeout=15)
+        add_res = session.post(f"{base_url}/panel/api/inbounds/addClient", json=add_data, headers=headers, verify=False, timeout=15)
         add_json = add_res.json()
         
         if add_json.get("success"):
@@ -94,9 +105,9 @@ def create_vless_config_via_panel(username, gb_amount):
             link = f"vless://{client_uuid}@{server_ip}:443?encryption=none&security=tls&type=tcp&headerType=none#{username}"
             return link
         else:
-            print("Add client failed:", add_json)
+            print("Add client to Pasargad failed:", add_json)
     except Exception as e:
-        print(f"Panel Connection Error: {e}")
+        print(f"Pasargad Connection Error: {e}")
     return None
 
 def main_inline_menu():
@@ -154,7 +165,6 @@ def handle_text_messages(message):
     chat_id = message.chat.id
     text = message.text
     
-    # دریافت کانفیگ دستی و ارسال به کاربر
     if message.from_user.id == ADMIN_ID and ADMIN_ID in waiting_for_config:
         data = waiting_for_config[ADMIN_ID]
         target_user_id = data["user_id"]
@@ -179,7 +189,6 @@ def handle_text_messages(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     chat_id = call.message.chat.id
-    user_id = call.from_user.id
     
     if call.data == "menu_buy":
         bot.answer_callback_query(call.id)
@@ -218,8 +227,6 @@ def callback_query(call):
             bot.send_message(chat_id, "✍️ مقدار حجم دلخواه خود را به عدد بفرستید:")
             return
             
-        user_pending_plan[user_id] = gb
-
         bot.answer_callback_query(call.id, f"پلن {gb} گیگی")
         invoice_text = (
             f"🛒 **فاکتور خرید اشتراک آمریکا**\n\n📦 حجم: {gb} گیگ\n💰 قابل پرداخت: {price} تومان\n\n"
@@ -235,9 +242,9 @@ def callback_query(call):
             pass
         bot.send_message(chat_id, "منوی اصلی:", reply_markup=main_inline_menu())
 
-    elif call.data.startswith("auto_approve_"):
-        _, _, target_user_id, gb_val = call.data.split("_")
-        bot.answer_callback_query(call.id, "در حال ساخت خودکار اکانت در پنل...")
+    elif call.data.startswith("approve_"):
+        _, target_user_id, gb_val = call.data.split("_")
+        bot.answer_callback_query(call.id, "در حال ساخت خودکار در پنل پاسارگاد...")
         
         config_link = create_vless_config_via_panel(f"user_{target_user_id}", gb_val)
         
@@ -250,17 +257,11 @@ def callback_query(call):
                     "از بخش «آموزش اتصال» می‌توانید نحوه راه‌اندازی را مشاهده کنید.",
                     parse_mode="Markdown"
                 )
-                bot.send_message(ADMIN_ID, f"✅ اکانت خودکار ساخته شد و برای کاربر ارسال گردید:\n`{config_link}`", parse_mode="Markdown")
+                bot.send_message(ADMIN_ID, f"✅ اکانت با موفقیت ساخته شد و برای کاربر ارسال گردید:\n`{config_link}`", parse_mode="Markdown")
             except Exception:
                 bot.send_message(ADMIN_ID, "❌ خطا در ارسال پیام به کاربر.")
         else:
-            bot.send_message(ADMIN_ID, "❌ خطا در ارتباط با پنل! لطفاً از دکمه ارسال دستی استفاده کنید.")
-
-    elif call.data.startswith("manual_approve_"):
-        _, _, target_user_id = call.data.split("_")
-        bot.answer_callback_query(call.id, "لطفاً کانفیگ دستی را ارسال کنید.")
-        waiting_for_config[ADMIN_ID] = {"user_id": int(target_user_id)}
-        bot.send_message(ADMIN_ID, f"✍️ لطفاً لینک کانفیگ دستی را برای کاربر (ID: `{target_user_id}`) بفرستید:", parse_mode="Markdown")
+            bot.send_message(ADMIN_ID, "❌ خطا در ساخت خودکار پنل پاسارگاد! لاگ رایلی رو چک کن.")
 
     elif call.data.startswith("reject_"):
         _, target_user_id = call.data.split("_")
@@ -276,23 +277,17 @@ def handle_receipt(message):
     if is_duplicate(message.message_id):
         return
     user = message.from_user
-    gb_val = user_pending_plan.get(user.id, 5)
+    gb_val = 5 
     
-    caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`\n📦 حجم درخواستی: {gb_val} گیگ"
-    
+    caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`"
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
-        InlineKeyboardButton("🤖 ارسال خودکار از پنل", callback_data=f"auto_approve_{user.id}_{gb_val}"),
-        InlineKeyboardButton("✍️ ارسال دستی کانفیگ", callback_data=f"manual_approve_{user.id}")
+        InlineKeyboardButton("🤖 ساخت و ارسال خودکار", callback_data=f"approve_{user.id}_{gb_val}"),
+        InlineKeyboardButton("❌ رد", callback_data=f"reject_{user.id}")
     )
-    markup.add(
-        InlineKeyboardButton("❌ رد فیش", callback_data=f"reject_{user.id}")
-    )
-    
     bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=caption, reply_markup=markup, parse_mode="Markdown")
     bot.reply_to(message, "✅ فیش شما ارسال شد و به زودی بررسی می‌گردد.")
 
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-            
