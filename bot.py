@@ -3,12 +3,12 @@ from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 
 TOKEN = "8990018709:AAERV3m40jVMHvjNkj4BZyRgzzjPIpT4rzo"
 ADMIN_ID = 7242000253
-ADMIN_USERNAME = "Taj_VPN_Support" # آیدی ادمین یا پشتیبانی رو اینجا گذاشتم (می‌تونی عوضش کنی)
+ADMIN_USERNAME = "Mohammaddd0f" # آیدی پشتیبانی و ادمین
 
 bot = telebot.TeleBot(TOKEN)
 waiting_for_config = {}
 
-# چینش دقیق دکمه‌های پایین صفحه کاملا مطابق با تصویر ارسالی شما
+# چینش دقیق دکمه‌های پایین صفحه
 def main_reply_menu():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     
@@ -49,13 +49,26 @@ def buy_menu():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_name = message.from_user.first_name
-    text = (
+    
+    # متن خوش‌آمدگویی شکیل همراه با پوستر
+    caption_text = (
         f"👑 **به ربات اختصاصی تاج وی‌پی‌ان خوش آمدید، {user_name} عزیز!**\n\n"
         "───────────────\n"
-        "⚡️ اتصال پرسرعت، پایدار و امن (آمریکا مناسب اینترنت ملی)\n"
-        "🛡 از منوی پایین صفحه برای خرید، تست یا مدیریت حساب استفاده کنید:"
+        "⚡️ **پادشاهی سرعت، امنیت و آزادی**\n"
+        "🇺🇸 سرورهای اختصاصی آمریکا [ مناسب برای اینترنت ملی ]\n"
+        "───────────────\n\n"
+        "🛡 از منوی زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
     )
-    bot.send_message(message.chat.id, text, reply_markup=main_reply_menu(), parse_mode="Markdown")
+    
+    # لطفا عکس پوستر را به ربات بفرستید و آیدی فایل آن را جایگزین مقدار زیر کنید 
+    # (یا می‌توانید عکس را مستقیم آپلود کنید و file_id آن را بگذارید)
+    # فعلا متن و ساختار ارسال عکس فعال است:
+    try:
+        # اگر می‌خواهید عکس با لینک مستقیم یا از طریق ارسال خودکار باشد:
+        # پیش‌فرض ساختار ارسال کپشن روی عکس:
+        bot.send_message(message.chat.id, caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
+    except Exception as e:
+        bot.send_message(message.chat.id, caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
 
 # مدیریت پیام‌های متنی و بررسی حالت انتظار کانفیگ برای ادمین
 @bot.message_handler(func=lambda message: True)
@@ -63,7 +76,6 @@ def handle_text_messages(message):
     chat_id = message.chat.id
     text = message.text
     
-    # اگر ادمین بود و دکمه تایید رو زده بود، این متن به عنوان کانفیگ ارسال میشه
     if message.from_user.id == ADMIN_ID and ADMIN_ID in waiting_for_config:
         target_user_id = waiting_for_config[ADMIN_ID]
         config_text = text
@@ -215,4 +227,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     print("Taj VPN Bot is running successfully...")
     bot.infinity_polling()
-  
+    
