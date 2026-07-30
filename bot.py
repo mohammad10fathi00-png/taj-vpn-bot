@@ -1,7 +1,7 @@
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "8990018709:AAFeNdvejhB26bZFemISB2empZPh4Fmo-nw"
+TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
 ADMIN_ID = 7242000253
 ADMIN_USERNAME = "Mohammaddd0f"
 
@@ -137,4 +137,3 @@ def handle_receipt(message):
 
 if __name__ == '__main__':
     bot.infinity_polling()
-    
