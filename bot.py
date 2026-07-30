@@ -2,17 +2,17 @@ import telebot
 import time
 import requests
 import urllib3
+import uuid
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# غیر فعال کردن اخطار SSL برای هاست‌های ابری
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
 ADMIN_ID = 7242000253
 ADMIN_USERNAME = "Mohammaddd0f"
 
-# ⚙️ اطلاعات پنل پاسارگاد شما
-PANEL_URL = "https://pasarguard-production-6f62.up.railway.app/"
+# ⚙️ تنظیمات پنل پاسارگاد
+PANEL_URL = "https://pasarguard-production-6f62.up.railway.app"
 PANEL_USERNAME = "admin"
 PANEL_PASSWORD = "PaSarGuard2026!"
 
@@ -31,42 +31,51 @@ def is_duplicate(message_id):
         del processed_messages[k]
     return False
 
-# تابع اتصال به پنل پاسارگاد و ساخت خودکار کاربر
+# تابع اصلاح‌شده برای لاگین و ساخت کلاینت در پنل X-UI
 def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
-        # لاگین به پنل
-        login_res = session.post(f"{PANEL_URL}login", data={
+        
+        # ۱. لاگین به پنل X-UI
+        login_res = session.post(f"{PANEL_URL}/login", json={
             "username": PANEL_USERNAME,
             "password": PANEL_PASSWORD
         }, verify=False)
         
         if not login_res.json().get("success"):
+            print("Login failed:", login_res.text)
             return None
 
-        # گرفتن لیست اینباندها
-        inbounds_res = session.get(f"{PANEL_URL}panel/api/inbounds/list", verify=False)
-        inbounds = inbounds_res.json().get("obj", [])
-        if not inbounds:
+        # ۲. گرفتن لیست اینباندها
+        inbounds_res = session.get(f"{PANEL_URL}/panel/api/inbounds/list", verify=False)
+        inbounds_data = inbounds_res.json()
+        
+        if not inbounds_data.get("success") or not inbounds_data.get("obj"):
+            print("Failed to get inbounds")
             return None
         
-        inbound_id = inbounds[0]['id']
+        inbounds = inbounds_data["obj"]
+        inbound_id = inbounds[0]['id'] # استفاده از اولین اینباند
         
-        import uuid
         client_uuid = str(uuid.uuid4())
         expire_time = int((time.time() + (30 * 86400)) * 1000) # 30 روزه
         total_bytes = int(gb_amount) * 1024 * 1024 * 1024
 
+        # ۳. ساخت کلاینت جدید در اینباند
         add_data = {
             "id": inbound_id,
             "settings": f'{{"clients": [{{"id": "{client_uuid}", "alterId": 0, "email": "{username}", "limitIp": 0, "totalGB": {total_bytes}, "expiryTime": {expire_time}, "enable": true, "tgId": "", "subId": ""}}]}}'
         }
 
-        add_res = session.post(f"{PANEL_URL}panel/api/inbounds/addClient", data=add_data, verify=False)
-        if add_res.json().get("success"):
-            server_ip = PANEL_URL.split("//")[1].split("/")[0].split(":")[0]
+        add_res = session.post(f"{PANEL_URL}/panel/api/inbounds/addClient", json=add_data, verify=False)
+        res_json = add_res.json()
+        
+        if res_json.get("success"):
+            server_ip = PANEL_URL.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
             link = f"vless://{client_uuid}@{server_ip}:443?encryption=none&security=tls&type=tcp&headerType=none#{username}"
             return link
+        else:
+            print("Add client failed:", res_json)
     except Exception as e:
         print(f"Panel Error: {e}")
     return None
@@ -257,7 +266,7 @@ def handle_receipt(message):
     if is_duplicate(message.message_id):
         return
     user = message.from_user
-    gb_val = 5 # پیش‌فرض 5 گیگ
+    gb_val = 5 
     
     caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`"
     markup = InlineKeyboardMarkup(row_width=2)
@@ -271,4 +280,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-        
+                
