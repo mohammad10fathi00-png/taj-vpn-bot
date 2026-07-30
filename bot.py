@@ -1,6 +1,6 @@
 import telebot
 import time
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
 ADMIN_ID = 7242000253
@@ -16,19 +16,27 @@ def is_duplicate(message_id):
         if current_time - processed_messages[message_id] < 3:
             return True
     processed_messages[message_id] = current_time
-    # پاکسازی حافظه موقت
     keys_to_del = [k for k, v in processed_messages.items() if current_time - v > 10]
     for k in keys_to_del:
         del processed_messages[k]
     return False
 
-def main_reply_menu():
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton("💳 خرید سرور"))
-    markup.add(KeyboardButton("🎁 دریافت اکانت تست"))
-    markup.add(KeyboardButton("👤 حساب‌های من"), KeyboardButton("❓ آموزش اتصال"))
-    markup.add(KeyboardButton("👥 درخواست همکاری عمده"))
-    markup.add(KeyboardButton("💬 پشتیبانی"))
+def main_inline_menu():
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton("💳 خرید سرور", callback_data="menu_buy"),
+        InlineKeyboardButton("🎁 دریافت اکانت تست", callback_data="menu_test")
+    )
+    markup.add(
+        InlineKeyboardButton("👤 حساب‌های من", callback_data="menu_account"),
+        InlineKeyboardButton("❓ آموزش اتصال", callback_data="menu_help")
+    )
+    markup.add(
+        InlineKeyboardButton("👥 درخواست همکاری عمده", callback_data="menu_partner")
+    )
+    markup.add(
+        InlineKeyboardButton("💬 پشتیبانی", callback_data="menu_support")
+    )
     return markup
 
 def buy_menu():
@@ -57,9 +65,9 @@ def send_welcome(message):
     )
     try:
         with open('poster.jpg', 'rb') as photo:
-            bot.send_photo(message.chat.id, photo, caption=caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
+            bot.send_photo(message.chat.id, photo, caption=caption_text, reply_markup=main_inline_menu(), parse_mode="Markdown")
     except Exception:
-        bot.send_message(message.chat.id, caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
+        bot.send_message(message.chat.id, caption_text, reply_markup=main_inline_menu(), parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: True)
 def handle_text_messages(message):
@@ -84,22 +92,38 @@ def handle_text_messages(message):
         del waiting_for_config[ADMIN_ID]
         return
 
-    if text == "💳 خرید سرور":
-        bot.send_message(chat_id, "💳 **خرید حساب اختصاصی**\n\nپنل: 🇺🇸 **آمریکا [ مناسب برای اینترنت ملی ]**\nقیمت هر گیگ: **5,000 تومان**", reply_markup=buy_menu(), parse_mode="Markdown")
-    elif text == "🎁 دریافت اکانت تست":
-        bot.send_message(chat_id, f"🎁 برای دریافت اکانت تست به ادمین پیام دهید:\n👉 @{ADMIN_USERNAME}", parse_mode="Markdown")
-    elif text == "👤 حساب‌های من":
-        bot.send_message(chat_id, "👤 شما در حال حاضر هیچ اشتراک فعالی ندارید.")
-    elif text == "❓ آموزش اتصال":
-        bot.send_message(chat_id, "❓ آموزش اتصال:\n• اندروید: V2RayNG\n• آیفون: FoXray\n• ویندوز: v2rayN")
-    elif text == "👥 درخواست همکاری عمده":
-        bot.send_message(chat_id, f"👥 برای همکاری عمده به ادمین پیام دهید:\n@{ADMIN_USERNAME}")
-    elif text == "💬 پشتیبانی":
-        bot.send_message(chat_id, f"💬 پشتیبانی:\n@{ADMIN_USERNAME}")
+    if text:
+        bot.send_message(chat_id, "لطفاً از دکمه‌های شیشه‌ای زیر پیام استفاده کنید:", reply_markup=main_inline_menu())
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    if call.data.startswith("buy_"):
+    chat_id = call.message.chat.id
+    
+    if call.data == "menu_buy":
+        bot.answer_callback_query(call.id)
+        bot.send_message(chat_id, "💳 **خرید حساب اختصاصی**\n\nپنل: 🇺🇸 **آمریکا [ مناسب برای اینترنت ملی ]**\nقیمت هر گیگ: **5,000 تومان**", reply_markup=buy_menu(), parse_mode="Markdown")
+    
+    elif call.data == "menu_test":
+        bot.answer_callback_query(call.id)
+        bot.send_message(chat_id, f"🎁 برای دریافت اکانت تست به ادمین پیام دهید:\n👉 @{ADMIN_USERNAME}", parse_mode="Markdown")
+        
+    elif call.data == "menu_account":
+        bot.answer_callback_query(call.id)
+        bot.send_message(chat_id, "👤 شما در حال حاضر هیچ اشتراک فعالی ندارید.")
+        
+    elif call.data == "menu_help":
+        bot.answer_callback_query(call.id)
+        bot.send_message(chat_id, "❓ آموزش اتصال:\n• اندروید: V2RayNG\n• آیفون: FoXray\n• ویندوز: v2rayN")
+        
+    elif call.data == "menu_partner":
+        bot.answer_callback_query(call.id)
+        bot.send_message(chat_id, f"👥 برای همکاری عمده به ادمین پیام دهید:\n@{ADMIN_USERNAME}")
+        
+    elif call.data == "menu_support":
+        bot.answer_callback_query(call.id)
+        bot.send_message(chat_id, f"💬 پشتیبانی:\n@{ADMIN_USERNAME}")
+
+    elif call.data.startswith("buy_"):
         plan = call.data.split("_")[1]
         if plan == "1gb":
             gb, price = 1, "5,000"
@@ -109,7 +133,7 @@ def callback_query(call):
             gb, price = 20, "100,000"
         elif plan == "custom":
             bot.answer_callback_query(call.id, "حجم دلخواه")
-            bot.send_message(call.message.chat.id, "✍️ مقدار حجم دلخواه خود را به عدد بفرستید:")
+            bot.send_message(chat_id, "✍️ مقدار حجم دلخواه خود را به عدد بفرستید:")
             return
             
         bot.answer_callback_query(call.id, f"پلن {gb} گیگی")
@@ -118,14 +142,14 @@ def callback_query(call):
             "───────────────\n💳 **کارت به کارت:**\n`6037997328226635`\nبه نام: **محمد فتحی**\n\n"
             "⏳ پس از واریز، **فیش واریزی** را همینجا بفرستید."
         )
-        bot.send_message(call.message.chat.id, invoice_text, parse_mode="Markdown")
+        bot.send_message(chat_id, invoice_text, parse_mode="Markdown")
         
     elif call.data == "main_menu":
         try:
-            bot.delete_message(call.message.chat.id, call.message.message_id)
+            bot.delete_message(chat_id, call.message.message_id)
         except Exception:
             pass
-        bot.send_message(call.message.chat.id, "منوی اصلی:", reply_markup=main_reply_menu())
+        bot.send_message(chat_id, "منوی اصلی:", reply_markup=main_inline_menu())
 
     elif call.data.startswith("approve_") or call.data.startswith("reject_"):
         action, target_user_id = call.data.split("_")
@@ -154,4 +178,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-    
+        
