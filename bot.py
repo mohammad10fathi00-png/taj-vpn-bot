@@ -11,14 +11,14 @@ TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
 ADMIN_ID = 7242000253
 ADMIN_USERNAME = "Mohammaddd0f"
 
-# ⚙️ تنظیمات پنل جدید
+# ⚙️ تنظیمات پنل
 PANEL_URL = "https://sub9.kaliteam.ir:8000"
 PANEL_USERNAME = "Mohammad1099"
 PANEL_PASSWORD = "@MohammadFathi1099"
 
 bot = telebot.TeleBot(TOKEN)
 waiting_for_config = {}
-user_pending_plan = {} # ذخیره حجم انتخابی کاربر
+user_pending_plan = {}
 processed_messages = {}
 
 def is_duplicate(message_id):
@@ -32,7 +32,7 @@ def is_duplicate(message_id):
         del processed_messages[k]
     return False
 
-# تابع ساخت خودکار کانفیگ با پنل جدید (بهینه‌شده برای رفع خطاهای ارتباطی)
+# تابع اصلاح‌شده و دقیق ساخت خودکار کانفیگ با پنل X-UI
 def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
@@ -55,7 +55,7 @@ def create_vless_config_via_panel(username, gb_amount):
         try:
             res_json = login_res.json()
             if not res_json.get("success"):
-                print("Login failed response:", res_json)
+                print("Login failed response json:", res_json)
                 return None
         except Exception as err:
             print("Login JSON decode error:", err)
@@ -69,7 +69,7 @@ def create_vless_config_via_panel(username, gb_amount):
         inbounds_data = inbounds_res.json()
         
         if not inbounds_data.get("success") or not inbounds_data.get("obj"):
-            print("Failed to fetch inbounds")
+            print("Failed to fetch inbounds:", inbounds_data)
             return None
         
         inbounds = inbounds_data["obj"]
@@ -154,6 +154,7 @@ def handle_text_messages(message):
     chat_id = message.chat.id
     text = message.text
     
+    # دریافت کانفیگ دستی و ارسال به کاربر
     if message.from_user.id == ADMIN_ID and ADMIN_ID in waiting_for_config:
         data = waiting_for_config[ADMIN_ID]
         target_user_id = data["user_id"]
@@ -217,7 +218,6 @@ def callback_query(call):
             bot.send_message(chat_id, "✍️ مقدار حجم دلخواه خود را به عدد بفرستید:")
             return
             
-        # ذخیره حجم پلن انتخاب شده برای این کاربر
         user_pending_plan[user_id] = gb
 
         bot.answer_callback_query(call.id, f"پلن {gb} گیگی")
@@ -254,7 +254,7 @@ def callback_query(call):
             except Exception:
                 bot.send_message(ADMIN_ID, "❌ خطا در ارسال پیام به کاربر.")
         else:
-            bot.send_message(ADMIN_ID, "❌ خطا در ارتباط با پنل! لطفاً لاگ رایلی را بررسی کنید یا از ارسال دستی استفاده کنید.")
+            bot.send_message(ADMIN_ID, "❌ خطا در ارتباط با پنل! لطفاً از دکمه ارسال دستی استفاده کنید.")
 
     elif call.data.startswith("manual_approve_"):
         _, _, target_user_id = call.data.split("_")
@@ -276,8 +276,6 @@ def handle_receipt(message):
     if is_duplicate(message.message_id):
         return
     user = message.from_user
-    
-    # برداشتن حجم انتخابی کاربر (پیش‌فرض ۵ گیگ اگر انتخاب نکرده بود)
     gb_val = user_pending_plan.get(user.id, 5)
     
     caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`\n📦 حجم درخواستی: {gb_val} گیگ"
@@ -297,4 +295,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-        
+            
