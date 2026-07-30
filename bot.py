@@ -1,7 +1,7 @@
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "8990018709:AAFeNdvejhB26bZFemISB2empZPh4Fmo"
+TOKEN = "8990018709:AAFeNdvejhB26bZFemISB2empZPh4Fmo-nw"
 ADMIN_ID = 7242000253
 ADMIN_USERNAME = "Mohammaddd0f"
 
