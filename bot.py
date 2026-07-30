@@ -1,4 +1,5 @@
 import telebot
+import time
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
@@ -7,6 +8,19 @@ ADMIN_USERNAME = "Mohammaddd0f"
 
 bot = telebot.TeleBot(TOKEN)
 waiting_for_config = {}
+processed_messages = {}
+
+def is_duplicate(message_id):
+    current_time = time.time()
+    if message_id in processed_messages:
+        if current_time - processed_messages[message_id] < 3:
+            return True
+    processed_messages[message_id] = current_time
+    # پاکسازی حافظه موقت
+    keys_to_del = [k for k, v in processed_messages.items() if current_time - v > 10]
+    for k in keys_to_del:
+        del processed_messages[k]
+    return False
 
 def main_reply_menu():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -30,6 +44,8 @@ def buy_menu():
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    if is_duplicate(message.message_id):
+        return
     user_name = message.from_user.first_name
     caption_text = (
         f"👑 **به ربات اختصاصی تاج وی‌پی‌ان خوش آمدید، {user_name} عزیز!**\n\n"
@@ -47,6 +63,8 @@ def send_welcome(message):
 
 @bot.message_handler(func=lambda message: True)
 def handle_text_messages(message):
+    if is_duplicate(message.message_id):
+        return
     chat_id = message.chat.id
     text = message.text
     
@@ -103,7 +121,10 @@ def callback_query(call):
         bot.send_message(call.message.chat.id, invoice_text, parse_mode="Markdown")
         
     elif call.data == "main_menu":
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass
         bot.send_message(call.message.chat.id, "منوی اصلی:", reply_markup=main_reply_menu())
 
     elif call.data.startswith("approve_") or call.data.startswith("reject_"):
@@ -118,6 +139,8 @@ def callback_query(call):
 
 @bot.message_handler(content_types=['photo'])
 def handle_receipt(message):
+    if is_duplicate(message.message_id):
+        return
     user = message.from_user
     caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`"
     markup = InlineKeyboardMarkup(row_width=2)
@@ -130,6 +153,5 @@ def handle_receipt(message):
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    # استفاده از چرخه امن بدون تردهای اضافی رایلی
-    bot.infinity_polling(skip_pending=True, none_stop=True)
+    bot.infinity_polling(skip_pending=True, interval=2)
     
