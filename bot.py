@@ -60,12 +60,15 @@ def send_welcome(message):
         "🛡 از منوی زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
     )
     
-    # لطفا عکس پوستر را به ربات بفرستید و آیدی فایل آن را جایگزین مقدار زیر کنید 
-    # (یا می‌توانید عکس را مستقیم آپلود کنید و file_id آن را بگذارید)
-    # فعلا متن و ساختار ارسال عکس فعال است:
+    # ارسال پوستر همراه با متن و منوی دکمه‌ای
+    # نکته: برای اولین بار، عکس پوستر را خودتان در چت ربات آپلود کنید یا آیدی عکس (file_id) را اینجا بگذارید.
+    # در صورتی که عکس هنوز ست نشده باشد، متن به عنوان پشتیبان ارسال می‌شود تا ربات ارور ندهد.
     try:
-        # اگر می‌خواهید عکس با لینک مستقیم یا از طریق ارسال خودکار باشد:
-        # پیش‌فرض ساختار ارسال کپشن روی عکس:
+        # اگر عکس را به ربات فرستادید و file_id آن را داشتید، اینجا جایگزین کنید:
+        # photo_id = "AgACAgQAAxkBAAIC..."
+        # bot.send_photo(message.chat.id, photo_id, caption=caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
+        
+        # حالت پیش‌فرض برای اولین اجرا (اگر عکس ارسال نشده باشد متن فرستاده می‌شود تا تست کنید):
         bot.send_message(message.chat.id, caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
