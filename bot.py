@@ -18,6 +18,7 @@ PANEL_PASSWORD = "@MohammadFathi1099"
 
 bot = telebot.TeleBot(TOKEN)
 waiting_for_config = {}
+user_pending_plan = {} # ذخیره حجم انتخابی کاربر
 processed_messages = {}
 
 def is_duplicate(message_id):
@@ -31,7 +32,7 @@ def is_duplicate(message_id):
         del processed_messages[k]
     return False
 
-# تابع ساخت خودکار کانفیگ با پنل جدید
+# تابع ساخت خودکار کانفیگ با پنل جدید (بهینه‌شده برای رفع خطاهای ارتباطی)
 def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
@@ -56,7 +57,8 @@ def create_vless_config_via_panel(username, gb_amount):
             if not res_json.get("success"):
                 print("Login failed response:", res_json)
                 return None
-        except Exception:
+        except Exception as err:
+            print("Login JSON decode error:", err)
             if login_res.status_code != 200:
                 print("Login status code error:", login_res.status_code)
                 return None
@@ -176,6 +178,7 @@ def handle_text_messages(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     chat_id = call.message.chat.id
+    user_id = call.from_user.id
     
     if call.data == "menu_buy":
         bot.answer_callback_query(call.id)
@@ -214,6 +217,9 @@ def callback_query(call):
             bot.send_message(chat_id, "✍️ مقدار حجم دلخواه خود را به عدد بفرستید:")
             return
             
+        # ذخیره حجم پلن انتخاب شده برای این کاربر
+        user_pending_plan[user_id] = gb
+
         bot.answer_callback_query(call.id, f"پلن {gb} گیگی")
         invoice_text = (
             f"🛒 **فاکتور خرید اشتراک آمریکا**\n\n📦 حجم: {gb} گیگ\n💰 قابل پرداخت: {price} تومان\n\n"
@@ -229,9 +235,9 @@ def callback_query(call):
             pass
         bot.send_message(chat_id, "منوی اصلی:", reply_markup=main_inline_menu())
 
-    elif call.data.startswith("approve_"):
-        _, target_user_id, gb_val = call.data.split("_")
-        bot.answer_callback_query(call.id, "در حال ساخت خودکار اکانت در پنل جدید...")
+    elif call.data.startswith("auto_approve_"):
+        _, _, target_user_id, gb_val = call.data.split("_")
+        bot.answer_callback_query(call.id, "در حال ساخت خودکار اکانت در پنل...")
         
         config_link = create_vless_config_via_panel(f"user_{target_user_id}", gb_val)
         
@@ -244,11 +250,17 @@ def callback_query(call):
                     "از بخش «آموزش اتصال» می‌توانید نحوه راه‌اندازی را مشاهده کنید.",
                     parse_mode="Markdown"
                 )
-                bot.send_message(ADMIN_ID, f"✅ اکانت با موفقیت ساخته شد و برای کاربر ارسال گردید:\n`{config_link}`", parse_mode="Markdown")
+                bot.send_message(ADMIN_ID, f"✅ اکانت خودکار ساخته شد و برای کاربر ارسال گردید:\n`{config_link}`", parse_mode="Markdown")
             except Exception:
                 bot.send_message(ADMIN_ID, "❌ خطا در ارسال پیام به کاربر.")
         else:
-            bot.send_message(ADMIN_ID, "❌ خطا در ارتباط با پنل جدید! لطفاً لاگ رایلی را بررسی کنید.")
+            bot.send_message(ADMIN_ID, "❌ خطا در ارتباط با پنل! لطفاً لاگ رایلی را بررسی کنید یا از ارسال دستی استفاده کنید.")
+
+    elif call.data.startswith("manual_approve_"):
+        _, _, target_user_id = call.data.split("_")
+        bot.answer_callback_query(call.id, "لطفاً کانفیگ دستی را ارسال کنید.")
+        waiting_for_config[ADMIN_ID] = {"user_id": int(target_user_id)}
+        bot.send_message(ADMIN_ID, f"✍️ لطفاً لینک کانفیگ دستی را برای کاربر (ID: `{target_user_id}`) بفرستید:", parse_mode="Markdown")
 
     elif call.data.startswith("reject_"):
         _, target_user_id = call.data.split("_")
@@ -264,14 +276,21 @@ def handle_receipt(message):
     if is_duplicate(message.message_id):
         return
     user = message.from_user
-    gb_val = 5 
     
-    caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`"
+    # برداشتن حجم انتخابی کاربر (پیش‌فرض ۵ گیگ اگر انتخاب نکرده بود)
+    gb_val = user_pending_plan.get(user.id, 5)
+    
+    caption = f"📥 **فیش واریزی جدید!**\n\n👤 نام: {user.first_name}\n🆔 آیدی: `{user.id}`\n📦 حجم درخواستی: {gb_val} گیگ"
+    
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
-        InlineKeyboardButton("🤖 ساخت و ارسال خودکار", callback_data=f"approve_{user.id}_{gb_val}"),
-        InlineKeyboardButton("❌ رد", callback_data=f"reject_{user.id}")
+        InlineKeyboardButton("🤖 ارسال خودکار از پنل", callback_data=f"auto_approve_{user.id}_{gb_val}"),
+        InlineKeyboardButton("✍️ ارسال دستی کانفیگ", callback_data=f"manual_approve_{user.id}")
     )
+    markup.add(
+        InlineKeyboardButton("❌ رد فیش", callback_data=f"reject_{user.id}")
+    )
+    
     bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=caption, reply_markup=markup, parse_mode="Markdown")
     bot.reply_to(message, "✅ فیش شما ارسال شد و به زودی بررسی می‌گردد.")
 
