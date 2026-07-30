@@ -41,13 +41,10 @@ def send_welcome(message):
         "🛡 از منوی زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
     )
     
-    # اینجا عکس رو مستقیم از فایل روی سرور یا به صورت ارسال هوشمند می‌فرستیم
-    # اگر عکست رو توی همون پوشه ربات با نام poster.jpg آپلود کنی، مستقیم ارسال میشه:
     try:
         with open('poster.jpg', 'rb') as photo:
             bot.send_photo(message.chat.id, photo, caption=caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
     except Exception:
-        # اگر عکس پیدا نشد، متن رو می‌فرسته تا ربات ارور نده
         bot.send_message(message.chat.id, caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: True)
@@ -140,4 +137,4 @@ def handle_receipt(message):
 
 if __name__ == '__main__':
     bot.infinity_polling()
-        
+    
