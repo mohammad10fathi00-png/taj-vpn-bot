@@ -31,7 +31,6 @@ def buy_menu():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_name = message.from_user.first_name
-    
     caption_text = (
         f"👑 **به ربات اختصاصی تاج وی‌پی‌ان خوش آمدید، {user_name} عزیز!**\n\n"
         "───────────────\n"
@@ -40,7 +39,6 @@ def send_welcome(message):
         "───────────────\n\n"
         "🛡 از منوی زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
     )
-    
     try:
         with open('poster.jpg', 'rb') as photo:
             bot.send_photo(message.chat.id, photo, caption=caption_text, reply_markup=main_reply_menu(), parse_mode="Markdown")
@@ -69,12 +67,7 @@ def handle_text_messages(message):
         return
 
     if text == "💳 خرید سرور":
-        bot.send_message(
-            chat_id, 
-            "💳 **خرید حساب اختصاصی**\n\nپنل: 🇺🇸 **آمریکا [ مناسب برای اینترنت ملی ]**\nقیمت هر گیگ: **5,000 تومان**", 
-            reply_markup=buy_menu(), 
-            parse_mode="Markdown"
-        )
+        bot.send_message(chat_id, "💳 **خرید حساب اختصاصی**\n\nپنل: 🇺🇸 **آمریکا [ مناسب برای اینترنت ملی ]**\nقیمت هر گیگ: **5,000 تومان**", reply_markup=buy_menu(), parse_mode="Markdown")
     elif text == "🎁 دریافت اکانت تست":
         bot.send_message(chat_id, f"🎁 برای دریافت اکانت تست به ادمین پیام دهید:\n👉 @{ADMIN_USERNAME}", parse_mode="Markdown")
     elif text == "👤 حساب‌های من":
@@ -137,6 +130,6 @@ def handle_receipt(message):
 
 if __name__ == '__main__':
     bot.remove_webhook()
-    print("Bot is starting...")
-    bot.infinity_polling(skip_pending=True)
+    # استفاده از چرخه امن بدون تردهای اضافی رایلی
+    bot.infinity_polling(skip_pending=True, none_stop=True)
     
