@@ -11,8 +11,8 @@ TOKEN = "8990018709:AAH8_Ix5jPnMhPw81vjqJJXeNYIT6Ovd2vI"
 ADMIN_ID = 7242000253
 ADMIN_USERNAME = "Mohammaddd0f"
 
-# ⚙️ تنظیمات پنل پاسارگاد
-PANEL_URL = "https://pasarguard-production-6f62.up.railway.app"
+# ⚙️ اطلاعات پنل پاسارگاد شما
+PANEL_URL = "https://pasarguard-production-6f62.up.railway.app/"
 PANEL_USERNAME = "admin"
 PANEL_PASSWORD = "PaSarGuard2026!"
 
@@ -31,23 +31,30 @@ def is_duplicate(message_id):
         del processed_messages[k]
     return False
 
-# تابع اصلاح‌شده برای لاگین و ساخت کلاینت در پنل X-UI
+# تابع کامل و اصلاح‌شده برای اتصال و ساخت خودکار کلاینت در پنل X-UI
 def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0"
+        }
         
-        # ۱. لاگین به پنل X-UI
-        login_res = session.post(f"{PANEL_URL}/login", json={
-            "username": PANEL_USERNAME,
-            "password": PANEL_PASSWORD
-        }, verify=False)
+        # ۱. لاگین به پنل
+        login_res = session.post(
+            f"{PANEL_URL}login", 
+            json={"username": PANEL_USERNAME, "password": PANEL_PASSWORD}, 
+            headers=headers, 
+            verify=False
+        )
         
         if not login_res.json().get("success"):
             print("Login failed:", login_res.text)
             return None
 
         # ۲. گرفتن لیست اینباندها
-        inbounds_res = session.get(f"{PANEL_URL}/panel/api/inbounds/list", verify=False)
+        inbounds_res = session.get(f"{PANEL_URL}panel/api/inbounds/list", headers=headers, verify=False)
         inbounds_data = inbounds_res.json()
         
         if not inbounds_data.get("success") or not inbounds_data.get("obj"):
@@ -55,19 +62,19 @@ def create_vless_config_via_panel(username, gb_amount):
             return None
         
         inbounds = inbounds_data["obj"]
-        inbound_id = inbounds[0]['id'] # استفاده از اولین اینباند
+        inbound_id = inbounds[0]['id']
         
         client_uuid = str(uuid.uuid4())
         expire_time = int((time.time() + (30 * 86400)) * 1000) # 30 روزه
         total_bytes = int(gb_amount) * 1024 * 1024 * 1024
 
-        # ۳. ساخت کلاینت جدید در اینباند
+        # ۳. ساخت کلاینت جدید
         add_data = {
             "id": inbound_id,
             "settings": f'{{"clients": [{{"id": "{client_uuid}", "alterId": 0, "email": "{username}", "limitIp": 0, "totalGB": {total_bytes}, "expiryTime": {expire_time}, "enable": true, "tgId": "", "subId": ""}}]}}'
         }
 
-        add_res = session.post(f"{PANEL_URL}/panel/api/inbounds/addClient", json=add_data, verify=False)
+        add_res = session.post(f"{PANEL_URL}panel/api/inbounds/addClient", json=add_data, headers=headers, verify=False)
         res_json = add_res.json()
         
         if res_json.get("success"):
@@ -280,4 +287,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-                
+        
