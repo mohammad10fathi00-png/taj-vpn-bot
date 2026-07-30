@@ -136,4 +136,6 @@ def handle_receipt(message):
     bot.reply_to(message, "✅ فیش شما ارسال شد.")
 
 if __name__ == '__main__':
-    bot.infinity_polling()
+    bot.remove_webhook()
+    bot.infinity_polling(skip_pending=True)
+            
