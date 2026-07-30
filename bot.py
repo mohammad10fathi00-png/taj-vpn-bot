@@ -24,7 +24,7 @@ def is_duplicate(message_id):
 def main_inline_menu():
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
-        InlineKeyboardButton("💳 خرید سرور", callback_data="menu_buy"),
+        InlineKeyboardButton("💳 خرید سرور اختصاصی", callback_data="menu_buy"),
         InlineKeyboardButton("🎁 دریافت اکانت تست", callback_data="menu_test")
     )
     markup.add(
@@ -35,7 +35,7 @@ def main_inline_menu():
         InlineKeyboardButton("👥 درخواست همکاری عمده", callback_data="menu_partner")
     )
     markup.add(
-        InlineKeyboardButton("💬 پشتیبانی", callback_data="menu_support")
+        InlineKeyboardButton("💬 ارتباط با پشتیبانی", callback_data="menu_support")
     )
     return markup
 
@@ -45,8 +45,8 @@ def buy_menu():
         InlineKeyboardButton("💳 اقتصادی - 1 گیگ - 5,000 تومان", callback_data="buy_1gb"),
         InlineKeyboardButton("💳 پیشنهادی - 5 گیگ - 25,000 تومان", callback_data="buy_5gb"),
         InlineKeyboardButton("💳 ویژه - 20 گیگ - 100,000 تومان", callback_data="buy_20gb"),
-        InlineKeyboardButton("➕ حجم دلخواه (1 تا 1000 گیگ)", callback_data="buy_custom"),
-        InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")
+        InlineKeyboardButton("➕ حجم دلخواه", callback_data="buy_custom"),
+        InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")
     )
     return markup
 
@@ -61,7 +61,7 @@ def send_welcome(message):
         "⚡️ **پادشاهی سرعت، امنیت و آزادی**\n"
         "🇺🇸 سرورهای اختصاصی آمریکا [ مناسب برای اینترنت ملی ]\n"
         "───────────────\n\n"
-        "🛡 از منوی زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
+        "🛡 از منوی شیشه‌ای زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
     )
     try:
         with open('poster.jpg', 'rb') as photo:
@@ -93,7 +93,7 @@ def handle_text_messages(message):
         return
 
     if text:
-        bot.send_message(chat_id, "لطفاً از دکمه‌های شیشه‌ای زیر پیام استفاده کنید:", reply_markup=main_inline_menu())
+        bot.send_message(chat_id, "منوی مدیریت و خرید:", reply_markup=main_inline_menu())
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -178,4 +178,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-        
+    
