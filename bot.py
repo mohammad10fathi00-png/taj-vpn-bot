@@ -31,7 +31,7 @@ def is_duplicate(message_id):
         del processed_messages[k]
     return False
 
-# تابع کامل و اصلاح‌شده برای اتصال و ساخت خودکار کلاینت در پنل X-UI
+# تابع نهایی اتصال با مسیر صحیح api/login
 def create_vless_config_via_panel(username, gb_amount):
     try:
         session = requests.Session()
@@ -41,50 +41,50 @@ def create_vless_config_via_panel(username, gb_amount):
             "User-Agent": "Mozilla/5.0"
         }
         
-        # ۱. لاگین به پنل
+        # اصلاح مسیر لاگین به api/login
+        login_url = f"{PANEL_URL.rstrip('/')}/api/login"
+        print(f"Connecting to: {login_url}")
+        
         login_res = session.post(
-            f"{PANEL_URL}login", 
+            login_url, 
             json={"username": PANEL_USERNAME, "password": PANEL_PASSWORD}, 
             headers=headers, 
             verify=False
         )
         
+        print("Login Status Code:", login_res.status_code)
+        print("Login Response:", login_res.text)
+        
         if not login_res.json().get("success"):
-            print("Login failed:", login_res.text)
             return None
 
-        # ۲. گرفتن لیست اینباندها
-        inbounds_res = session.get(f"{PANEL_URL}panel/api/inbounds/list", headers=headers, verify=False)
+        inbounds_res = session.get(f"{PANEL_URL.rstrip('/')}/panel/api/inbounds/list", headers=headers, verify=False)
         inbounds_data = inbounds_res.json()
         
         if not inbounds_data.get("success") or not inbounds_data.get("obj"):
-            print("Failed to get inbounds")
             return None
         
         inbounds = inbounds_data["obj"]
         inbound_id = inbounds[0]['id']
         
         client_uuid = str(uuid.uuid4())
-        expire_time = int((time.time() + (30 * 86400)) * 1000) # 30 روزه
+        expire_time = int((time.time() + (30 * 86400)) * 1000)
         total_bytes = int(gb_amount) * 1024 * 1024 * 1024
 
-        # ۳. ساخت کلاینت جدید
         add_data = {
             "id": inbound_id,
             "settings": f'{{"clients": [{{"id": "{client_uuid}", "alterId": 0, "email": "{username}", "limitIp": 0, "totalGB": {total_bytes}, "expiryTime": {expire_time}, "enable": true, "tgId": "", "subId": ""}}]}}'
         }
 
-        add_res = session.post(f"{PANEL_URL}panel/api/inbounds/addClient", json=add_data, headers=headers, verify=False)
+        add_res = session.post(f"{PANEL_URL.rstrip('/')}/panel/api/inbounds/addClient", json=add_data, headers=headers, verify=False)
         res_json = add_res.json()
         
         if res_json.get("success"):
             server_ip = PANEL_URL.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
             link = f"vless://{client_uuid}@{server_ip}:443?encryption=none&security=tls&type=tcp&headerType=none#{username}"
             return link
-        else:
-            print("Add client failed:", res_json)
     except Exception as e:
-        print(f"Panel Error: {e}")
+        print(f"CRITICAL PANEL ERROR: {str(e)}")
     return None
 
 def main_inline_menu():
@@ -287,4 +287,4 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-        
+            
