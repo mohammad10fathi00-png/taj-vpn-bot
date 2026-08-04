@@ -45,7 +45,6 @@ def create_vless_config_via_panel(username, gb_amount):
             "X-Requested-With": "XMLHttpRequest"
         }
         
-        # ۱. ورود به پنل و دریافت کوکی سشن
         login_url = f"{base_url}/login"
         payload = {"username": PANEL_USERNAME, "password": PANEL_PASSWORD}
         res = session.post(login_url, json=payload, headers=headers, verify=False, timeout=15)
@@ -63,7 +62,6 @@ def create_vless_config_via_panel(username, gb_amount):
             print("Panel Login Failed.")
             return None
 
-        # ۲. گرفتن لیست اینباندها
         inbounds_url = f"{base_url}/panel/api/inbounds/list"
         inbounds_res = session.get(inbounds_url, headers=headers, verify=False, timeout=15)
         inbounds_data = inbounds_res.json()
@@ -74,10 +72,9 @@ def create_vless_config_via_panel(username, gb_amount):
         
         inbound_id = inbounds_data["obj"][0]['id']
         client_uuid = str(uuid.uuid4())
-        expire_time = int((time.time() + (30 * 86400)) * 1000) # ۳۰ روزه
+        expire_time = int((time.time() + (30 * 86400)) * 1000)
         total_bytes = int(gb_amount) * 1024 * 1024 * 1024
 
-        # ۳. ساخت کلاینت جدید با فرمت استاندارد پنل‌های X-UI (سنائی/پاسارگاد)
         add_url = f"{base_url}/panel/api/inbounds/addClient"
         client_data = {
             "id": inbound_id,
@@ -136,8 +133,8 @@ def send_welcome(message):
     caption_text = (
         f"👑 **به ربات اختصاصی تاج وی‌پی‌ان خوش آمدید، {user_name} عزیز!**\n\n"
         "───────────────\n"
-        "⚡️ **پادشاهی سرعت، امنیت و آزادی**\n"
-        "🇺🇸 سرورهای اختصاصی آمریکا [ مناسب برای اینترنت ملی ]\n"
+        "⚡️ **پادشاهی سرعت، امنیت و آزادی بی‌حدومرز**\n"
+        "🚀 مجهز به سرورهای پرسرعت، پایدار و بدون قطعی\n"
         "───────────────\n\n"
         "🛡 از منوی شیشه‌ای زیر برای خرید، دریافت تست یا مدیریت حساب استفاده کنید:"
     )
@@ -165,7 +162,7 @@ def handle_text_messages(message):
             price_formatted = f"{price:,}"
             
             invoice_text = (
-                f"🛒 **فاکتور خرید اشتراک آمریکا (حجم دلخواه)**\n\n"
+                f"🛒 **فاکتور خرید اشتراک پرسرعت (حجم دلخواه)**\n\n"
                 f"📦 حجم: {gb} گیگ\n"
                 f"💰 قابل پرداخت: {price_formatted} تومان\n\n"
                 "───────────────\n"
@@ -210,7 +207,7 @@ def callback_query(call):
     
     if call.data == "menu_buy":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💳 **خرید حساب اختصاصی**\n\nپنل: 🇺🇸 **آمریکا [ مناسب برای اینترنت ملی ]**\nقیمت هر گیگ: **5,000 تومان**", reply_markup=buy_menu(), parse_mode="Markdown")
+        bot.send_message(chat_id, "💳 **خرید حساب اختصاصی**\n\n⚡️ سرورهای پرسرعت و بهینه‌شده\nقیمت هر گیگ: **5,000 تومان**", reply_markup=buy_menu(), parse_mode="Markdown")
     
     elif call.data == "menu_test":
         bot.answer_callback_query(call.id)
@@ -250,7 +247,7 @@ def callback_query(call):
         user_custom_gb_cache[user_id] = gb
         bot.answer_callback_query(call.id, f"پلن {gb} گیگی")
         invoice_text = (
-            f"🛒 **فاکتور خرید اشتراک آمریکا**\n\n📦 حجم: {gb} گیگ\n💰 قابل پرداخت: {price} تومان\n\n"
+            f"🛒 **فاکتور خرید اشتراک پرسرعت**\n\n📦 حجم: {gb} گیگ\n💰 قابل پرداخت: {price} تومان\n\n"
             "───────────────\n💳 **کارت به کارت:**\n`6037997328226635`\nبه نام: **محمد فتحی**\n\n"
             "⏳ پس از واریز، **فیش واریزی** را همینجا بفرستید."
         )
@@ -303,7 +300,7 @@ def callback_query(call):
             try:
                 bot.send_message(
                     int(target_user_id),
-                    f"🎉 **سرویس شما خودکار فعال گردید!**\n\n"
+                    f"🎉 **سرویس پرسرعت شما خودکار فعال گردید!**\n\n"
                     f"🔗 **لینک اشتراک اختصاصی شما:**\n`{config_link}`\n\n"
                     "از بخش «آموزش اتصال» می‌توانید نحوه راه‌اندازی را مشاهده کنید.",
                     parse_mode="Markdown"
@@ -317,7 +314,7 @@ def callback_query(call):
             except Exception:
                 bot.send_message(ADMIN_ID, "❌ خطا در ارسال پیام به کاربر.")
         else:
-            bot.send_message(ADMIN_ID, "❌ خطا در ساخت خودکار از پنل پاسارگاد! (لاگ سرور رو چک کن)")
+            bot.send_message(ADMIN_ID, "❌ خطا در ساخت خودکار از پنل پاسارگاد!")
 
     elif call.data.startswith("manual_"):
         _, target_user_id = call.data.split("_")
@@ -361,4 +358,3 @@ def handle_receipt(message):
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True, interval=2)
-        
